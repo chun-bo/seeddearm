@@ -1,73 +1,325 @@
-# React + TypeScript + Vite
+# Doubao-Seedream 图片融合平台
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个让用户使用自己的 Doubao-Seedream-4.0 API 密钥进行智能图片融合的 Web 平台。用户无需搭建技术环境，只需提供 API 密钥即可享受专业的图片融合服务。
 
-Currently, two official plugins are available:
+## 📋 项目概述
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 平台定位
+**为用户提供图片融合服务的 SaaS 平台**
+- 用户使用自己的 Doubao-Seedream-4.0 API 密钥
+- 平台提供友好的 Web 界面和完整的用户体验
+- 无需用户搭建技术环境，开箱即用
 
-## React Compiler
+### 核心功能
+- **API 密钥管理**: 用户安全存储和管理自己的 API 密钥
+- **多图上传**: 支持拖拽上传多张图片（JPG、PNG、WebP等格式）
+- **智能融合**: 基于用户提示词将多张图片融合成新图片
+- **实时预览**: 上传图片的实时预览和管理
+- **历史记录**: 保存用户的生成历史和项目管理
+- **用量统计**: 显示用户的 API 调用次数和费用统计
+- **用户系统**: 完整的用户注册、登录、个人中心功能
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 商业模式
+- **免费平台**: 用户免费使用平台功能
+- **用户付费**: 用户使用自己的 API 密钥承担 AI 服务费用
+- **增值服务**: 可提供高级功能、模板库、批量处理等付费功能
 
-## Expanding the ESLint configuration
+## 🛠 技术架构
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 前端技术栈
+- **框架**: React 18 + TypeScript + Vite
+- **UI库**: Ant Design 5.x + Tailwind CSS
+- **状态管理**: Zustand
+- **HTTP客户端**: Axios + React Query
+- **文件上传**: react-dropzone
+- **图片处理**: 原生 Canvas API
+- **路由**: React Router 6
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 后端服务
+- **数据库**: Supabase (PostgreSQL)
+- **用户认证**: Supabase Auth
+- **文件存储**: Supabase Storage
+- **API代理**: Supabase Edge Functions
+- **实时功能**: Supabase Realtime
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 部署方案
+- **前端部署**: Vercel
+- **后端服务**: Supabase
+- **CDN加速**: Vercel Edge Network
+- **域名**: 支持自定义域名
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🚀 开发流程指南
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 阶段一：本地环境搭建 (第1-2天)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**目标**: 搭建基础开发环境，实现基本的项目结构
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+**主要任务**:
+- 初始化 React + TypeScript 项目
+- 配置开发工具链（ESLint、Prettier、Vite）
+- 搭建基础路由和页面结构
+- 集成 Ant Design 和 Tailwind CSS
+- 创建 Mock API 服务用于本地开发
+
+**验收标准**:
+- 项目能在本地正常启动
+- 基础页面路由正常跳转
+- UI 组件库正常工作
+
+---
+
+### 阶段二：用户系统开发 (第3-5天)
+
+**目标**: 实现完整的用户注册、登录、个人中心功能
+
+**主要任务**:
+- 设计用户注册/登录界面
+- 实现用户认证流程（本地 Mock）
+- 创建个人中心页面
+- 实现 API 密钥管理功能
+- 设计用户状态管理
+
+**核心页面**:
+- 登录/注册页面
+- 个人中心页面
+- API 密钥设置页面
+
+**验收标准**:
+- 用户可以注册和登录
+- 可以在个人中心管理 API 密钥
+- 用户状态在页面刷新后保持
+
+---
+
+### 阶段三：图片上传和管理 (第6-8天)
+
+**目标**: 实现图片上传、预览、管理功能
+
+**主要任务**:
+- 实现拖拽上传组件
+- 图片预览和缩略图生成
+- 图片列表管理（排序、删除）
+- 文件格式和大小验证
+- 上传进度显示
+
+**核心组件**:
+- ImageUpload 图片上传组件
+- ImagePreview 图片预览组件
+- ImageList 图片列表组件
+
+**验收标准**:
+- 支持多种图片格式上传
+- 图片预览功能正常
+- 可以管理上传的图片列表
+
+---
+
+### 阶段四：图片融合功能 (第9-12天)
+
+**目标**: 集成 Doubao-Seedream API，实现图片融合核心功能
+
+**主要任务**:
+- 设计 API 代理服务架构
+- 实现 Doubao-Seedream API 集成
+- 创建提示词输入组件
+- 实现融合任务提交和状态查询
+- 结果图片展示和下载
+
+**核心功能**:
+- API 密钥验证和安全存储
+- 图片融合任务提交
+- 实时任务状态查询
+- 融合结果展示
+
+**验收标准**:
+- 可以使用用户的 API 密钥调用服务
+- 图片融合功能正常工作
+- 任务状态实时更新
+
+---
+
+### 阶段五：历史记录和项目管理 (第13-15天)
+
+**目标**: 实现用户的历史记录管理和项目组织功能
+
+**主要任务**:
+- 设计项目数据结构
+- 实现历史记录列表
+- 项目详情页面
+- 搜索和筛选功能
+- 批量操作功能
+
+**核心页面**:
+- 历史记录页面
+- 项目详情页面
+- 工作台页面
+
+**验收标准**:
+- 用户可以查看历史记录
+- 可以重新编辑历史项目
+- 支持搜索和筛选
+
+---
+
+### 阶段六：云端服务集成 (第16-18天)
+
+**目标**: 集成 Supabase 服务，实现数据持久化
+
+**主要任务**:
+- 配置 Supabase 项目
+- 设计数据库表结构
+- 实现用户认证集成
+- 配置文件存储服务
+- 数据安全策略设置
+
+**数据库设计**:
+- users 用户表（Supabase Auth 管理）
+- user_settings 用户设置表（API 密钥等）
+- projects 项目表
+- project_images 项目图片表
+- usage_logs 使用记录表
+
+**验收标准**:
+- 用户数据可以持久化存储
+- API 密钥安全加密存储
+- 文件上传到云端存储
+
+---
+
+### 阶段七：用量统计和监控 (第19-20天)
+
+**目标**: 实现用户的 API 使用统计和平台监控
+
+**主要任务**:
+- 实现 API 调用记录
+- 用量统计图表
+- 费用估算功能
+- 错误监控和日志
+- 性能优化
+
+**统计功能**:
+- 每日/每月 API 调用次数
+- 成功率统计
+- 费用估算
+- 使用趋势图表
+
+**验收标准**:
+- 用户可以查看详细的使用统计
+- 平台运行稳定，错误率低
+- 页面加载速度快
+
+---
+
+### 阶段八：部署上线 (第21-23天)
+
+**目标**: 将应用部署到生产环境
+
+**主要任务**:
+- 配置生产环境变量
+- 设置 Vercel 部署
+- 配置自定义域名
+- 设置监控和分析
+- 性能测试和优化
+
+**部署清单**:
+- Vercel 项目配置
+- Supabase 生产环境
+- 环境变量设置
+- 域名和 SSL 配置
+- 监控工具集成
+
+**验收标准**:
+- 应用成功部署到生产环境
+- 所有功能在生产环境正常工作
+- 监控和分析正常运行
+
+## 🔐 安全设计
+
+### API 密钥安全
+- **客户端加密**: 用户 API 密钥在客户端加密存储
+- **服务端代理**: 通过后端代理调用 Doubao API，避免密钥暴露
+- **权限控制**: 用户只能访问自己的数据和设置
+- **审计日志**: 记录所有 API 调用和敏感操作
+
+### 数据安全
+- **行级安全**: 使用 Supabase RLS 确保数据隔离
+- **HTTPS**: 全站 HTTPS 加密传输
+- **输入验证**: 严格的前后端输入验证
+- **文件安全**: 上传文件类型和大小限制
+
+## 📊 业务指标设计
+
+### 用户指标
+- 注册用户数
+- 活跃用户数（DAU/MAU）
+- 用户留存率
+- API 密钥配置率
+
+### 使用指标
+- 图片上传数量
+- 融合任务成功率
+- 平均任务处理时间
+- 用户满意度
+
+### 技术指标
+- 页面加载速度
+- API 响应时间
+- 错误率
+- 系统可用性
+
+## 🎯 产品特色
+
+### 用户体验
+- **零配置**: 用户只需提供 API 密钥即可使用
+- **直观界面**: 简洁友好的操作界面
+- **实时反馈**: 任务状态实时更新
+- **移动适配**: 支持手机和平板访问
+
+### 技术优势
+- **高性能**: 基于现代前端技术栈
+- **可扩展**: 模块化架构，易于扩展功能
+- **安全可靠**: 完善的安全机制和错误处理
+- **免运维**: 基于 Serverless 架构，自动扩缩容
+
+## 🚀 未来规划
+
+### v1.0 核心功能
+- 基础图片融合功能
+- 用户系统和 API 密钥管理
+- 历史记录和项目管理
+
+### v1.1 增强功能
+- 批量处理功能
+- 模板库和预设
+- 高级编辑工具
+
+### v1.2 商业化功能
+- 付费高级功能
+- 团队协作功能
+- API 使用优化建议
+
+### v2.0 平台化
+- 支持更多 AI 服务商
+- 插件系统
+- 开放 API
+
+## 📞 开发支持
+
+### 技术文档
+- API 接口文档
+- 组件使用指南
+- 部署操作手册
+
+### 开发工具
+- 代码规范检查
+- 自动化测试
+- 持续集成部署
+
+### 问题反馈
+- GitHub Issues
+- 开发者社区
+- 技术支持邮箱
+
+---
+
+**项目愿景**: 打造最好用的 Doubao-Seedream 图片融合平台，让每个用户都能轻松享受 AI 图片融合的乐趣。
