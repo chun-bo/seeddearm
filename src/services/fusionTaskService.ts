@@ -133,11 +133,21 @@ export class FusionTaskService {
       // 在调用 API 前转换图片
       const processedImages = await this.convertImagesToBase64(task.images);
       
+      // 根据图片数量决定 image 参数的格式
+      let imageParam: string | string[] | undefined;
+      if (processedImages.length === 1) {
+        imageParam = processedImages[0]; // 单图模式，使用字符串
+      } else if (processedImages.length > 1) {
+        imageParam = processedImages; // 多图模式，使用数组
+      } else {
+        imageParam = undefined; // 文生图模式
+      }
+
       const result = await api.generateWithStream(
         {
           model: task.config.model,
           prompt: task.prompt,
-          image: processedImages.length > 0 ? processedImages : undefined,
+          image: imageParam,
           size: task.config.size,
           sequential_image_generation: task.config.sequential_image_generation,
           sequential_image_generation_options: task.config.max_images ? {
