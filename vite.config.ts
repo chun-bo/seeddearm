@@ -13,6 +13,13 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true,
+    proxy: {
+      '/doubao-api': {
+        target: 'https://ark.cn-beijing.volces.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/doubao-api/, ''),
+      },
+    },
   },
   build: {
     outDir: 'dist',

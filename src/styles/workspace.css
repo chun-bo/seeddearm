@@ -1,0 +1,81 @@
+/* Workspace 页面样式 */
+.workspace-tabs .ant-tabs-nav {
+  margin-bottom: 24px;
+}
+
+.workspace-tabs .ant-tabs-tab {
+  padding: 12px 20px;
+  font-weight: 500;
+}
+
+.workspace-tabs .ant-tabs-tab-active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white !important;
+  border-radius: 8px 8px 0 0;
+}
+
+.workspace-tabs .ant-tabs-content-holder {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 24px;
+  min-height: 600px;
+}
+
+/* 融合工作区样式 */
+.fusion-workspace .ant-steps {
+  margin-bottom: 24px;
+}
+
+.fusion-workspace .ant-steps-item-finish .ant-steps-item-icon {
+  background-color: #52c41a;
+  border-color: #52c41a;
+}
+
+.fusion-workspace .ant-steps-item-process .ant-steps-item-icon {
+  background-color: #1890ff;
+  border-color: #1890ff;
+}
+
+/* 图片查看器样式 */
+.image-viewer-modal .ant-modal-content {
+  background: #000;
+}
+
+.image-viewer-modal .ant-modal-header {
+  background: #000;
+  border-bottom: 1px solid #333;
+}
+
+.image-viewer-modal .ant-modal-title {
+  color: #fff;
+}
+
+.image-viewer-modal .ant-modal-close {
+  color: #fff;
+}
+
+.image-viewer-modal .ant-modal-close:hover {
+  color: #1890ff;
+}
+
+/* 任务历史卡片样式 */
+.task-history-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.task-history-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .workspace-tabs .ant-tabs-content-holder {
+    padding: 16px;
+  }
+  
+  .fusion-workspace .ant-steps {
+    margin-bottom: 16px;
+  }
+}
