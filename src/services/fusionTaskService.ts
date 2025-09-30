@@ -63,19 +63,22 @@ export class FusionTaskService {
 
       const api = createSeedreamAPI(this.apiKey)
       
+      // 在调用 API 前转换图片
+      const processedImages = await this.convertImagesToBase64(task.images);
+
       // 根据图片数量和配置选择合适的生成方法
       let result: SeedreamResponse
 
-      if (task.images.length === 0) {
+      if (processedImages.length === 0) {
         // 文生图
         result = await api.textToImage(task.prompt, {
           size: task.config.size,
           response_format: task.config.response_format,
           watermark: task.config.watermark
         })
-      } else if (task.images.length === 1 && task.config.sequential_image_generation === 'disabled') {
+      } else if (processedImages.length === 1 && task.config.sequential_image_generation === 'disabled') {
         // 单图生图
-        result = await api.imageToImage(task.prompt, task.images[0], {
+        result = await api.imageToImage(task.prompt, processedImages[0], {
           size: task.config.size,
           response_format: task.config.response_format,
           watermark: task.config.watermark
@@ -85,7 +88,7 @@ export class FusionTaskService {
         result = await api.generateImageSet(
           task.prompt,
           task.config.max_images || 4,
-          task.images.length > 0 ? task.images : undefined,
+          processedImages.length > 0 ? processedImages : undefined,
           {
             size: task.config.size,
             response_format: task.config.response_format,
@@ -94,7 +97,7 @@ export class FusionTaskService {
         )
       } else {
         // 多图融合
-        result = await api.fuseImages(task.prompt, task.images, {
+        result = await api.fuseImages(task.prompt, processedImages, {
           size: task.config.size,
           response_format: task.config.response_format,
           watermark: task.config.watermark
@@ -127,11 +130,14 @@ export class FusionTaskService {
 
       const api = createSeedreamAPI(this.apiKey)
       
+      // 在调用 API 前转换图片
+      const processedImages = await this.convertImagesToBase64(task.images);
+      
       const result = await api.generateWithStream(
         {
           model: task.config.model,
           prompt: task.prompt,
-          image: task.images.length > 0 ? task.images : undefined,
+          image: processedImages.length > 0 ? processedImages : undefined,
           size: task.config.size,
           sequential_image_generation: task.config.sequential_image_generation,
           sequential_image_generation_options: task.config.max_images ? {
@@ -244,6 +250,32 @@ export class FusionTaskService {
    */
   private generateTaskId(): string {
     return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }
+
+  /**
+   * 将图片（特别是 blob URL）转换为 Base64 编码
+   */
+  private async convertImagesToBase64(imageUrls: string[]): Promise<string[]> {
+    const conversionPromises = imageUrls.map(async (url) => {
+      // 只转换 blob URL，其他假定为有效的公网 URL
+      if (url.startsWith('blob:')) {
+        try {
+          const response = await fetch(url);
+          const blob = await response.blob();
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.error(`将 blob URL 转换为 Base64 失败: ${url}`, error);
+          throw new Error(`无法转换图片: ${url}`);
+        }
+      }
+      return url;
+    });
+    return Promise.all(conversionPromises);
   }
 
   /**

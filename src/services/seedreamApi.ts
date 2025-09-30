@@ -193,9 +193,15 @@ export class SeedreamAPI {
       throw new Error('无法读取响应流')
     }
 
-    let finalResult: any = {}
     const decoder = new TextDecoder()
     let buffer = ''
+    
+    // 用于累积结果的状态变量
+    const imageDataArray: { url: string; size: string; }[] = [];
+    let usage: any = null;
+    let finalModel: string | undefined;
+    let finalCreated: number | undefined;
+    let finalError: any = null;
 
     try {
       while (true) {
@@ -218,8 +224,27 @@ export class SeedreamAPI {
               if (onProgress) {
                 onProgress(data)
               }
-              // 逐步组装最终结果
-              finalResult = { ...finalResult, ...data }
+              
+              // 累积数据而不是覆盖
+              if (data.url) {
+                imageDataArray.push({
+                    url: data.url,
+                    size: data.size || ''
+                });
+              }
+              if (data.usage) {
+                usage = data.usage;
+              }
+              if (data.model) {
+                finalModel = data.model;
+              }
+              if (data.created) {
+                finalCreated = data.created;
+              }
+              if (data.error) {
+                finalError = data.error;
+              }
+
             } catch (e) {
               console.warn('解析流JSON数据失败:', content)
             }
@@ -231,24 +256,21 @@ export class SeedreamAPI {
     }
 
     // 最终检查和组装
-    if (finalResult.url && finalResult.usage) {
-      console.log('成功组装最终结果:', finalResult);
+    if (imageDataArray.length > 0 && usage) {
       const assembledResponse: SeedreamResponse = {
-        model: finalResult.model || this.defaultModel,
-        created: finalResult.created || Math.floor(Date.now() / 1000),
-        usage: finalResult.usage,
-        data: [{
-          url: finalResult.url,
-          size: finalResult.size || '',
-        }],
+        model: finalModel || this.defaultModel,
+        created: finalCreated || Math.floor(Date.now() / 1000),
+        usage: usage,
+        data: imageDataArray,
       };
+      console.log(`成功组装最终结果，包含 ${imageDataArray.length} 张图片:`, assembledResponse);
       return assembledResponse;
     }
 
-    // 如果没有成功的结果，则抛出错误
-    console.error('流处理完成，但未生成有效结果:', finalResult);
-    if (finalResult.error) {
-      throw new Error(`API 返回明确错误: ${finalResult.error.message} (代码: ${finalResult.error.code})`);
+    // 错误处理
+    console.error('流处理完成，但未生成有效结果或用量信息缺失。', { imageDataArray, usage });
+    if (finalError) {
+      throw new Error(`API 返回明确错误: ${finalError.message} (代码: ${finalError.code})`);
     }
     throw new Error('未收到有效的生成结果，图片URL或用量信息缺失。');
   }
