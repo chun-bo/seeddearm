@@ -20,10 +20,6 @@ const AppHeader: React.FC = () => {
       key: '/workspace',
       label: <Link to="/workspace">工作台</Link>,
     },
-    {
-      key: '/history',
-      label: <Link to="/history">历史记录</Link>,
-    },
   ]
 
   const userMenuItems = [

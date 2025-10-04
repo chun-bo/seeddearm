@@ -6,7 +6,6 @@ import AppFooter from './components/layout/AppFooter'
 import Home from './pages/Home'
 import Auth from './pages/Auth'
 import Workspace from './pages/Workspace'
-import History from './pages/History'
 import Profile from './pages/Profile'
 import NotFound from './pages/NotFound'
 
@@ -21,7 +20,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/auth/*" element={<Auth />} />
           <Route path="/workspace" element={<Workspace />} />
-          <Route path="/history" element={<History />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
