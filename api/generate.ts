@@ -9,11 +9,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const doubaoApiUrl = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
   
-  // 从环境变量中获取 API Key，确保它已在 Vercel 中配置
-  const apiKey = process.env.VITE_DOUBAO_API_KEY;
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authorization header is missing or invalid.' });
+  }
+
+  const apiKey = authHeader.split(' ')[1];
 
   if (!apiKey) {
-    return res.status(500).json({ error: 'API key is not configured on the server.' });
+    return res.status(401).json({ error: 'API key is missing from Authorization header.' });
   }
 
   try {

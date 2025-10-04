@@ -166,6 +166,7 @@ export class SeedreamAPI {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // 将用户的 API Key 传递给我们的后端代理
         'Authorization': `Bearer ${this.apiKey}`
       },
       body: JSON.stringify({
