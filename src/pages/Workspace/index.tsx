@@ -1,13 +1,11 @@
 import React, { useState, useCallback } from 'react'
 import { Typography, Tabs, message } from 'antd'
 import { 
-  PictureOutlined, 
   HistoryOutlined, 
   SettingOutlined,
   RocketOutlined 
 } from '@ant-design/icons'
 import { FusionWorkspace } from '../../components/fusion'
-import { ImageUpload, ImageList } from '../../components/image'
 import type { UploadFile, FusionTask } from '../../types'
 import { useSettingsStore } from '../../stores/settingsStore'
 
@@ -15,25 +13,9 @@ const { Title } = Typography
 
 const Workspace: React.FC = () => {
   const [activeTab, setActiveTab] = useState('fusion')
-  const [uploadedFiles, setUploadedFiles] = useState<UploadFile[]>([])
   const [taskHistory, setTaskHistory] = useState<FusionTask[]>([])
 
   const { settings } = useSettingsStore()
-
-  // 处理图片上传
-  const handleImageUpload = useCallback((newFiles: UploadFile[]) => {
-    setUploadedFiles(prev => [...prev, ...newFiles])
-  }, [])
-
-  // 处理图片删除
-  const handleImageRemove = useCallback((fileId: string) => {
-    setUploadedFiles(prev => prev.filter(file => file.id !== fileId))
-  }, [])
-
-  // 清空所有图片
-  const handleClearAll = useCallback(() => {
-    setUploadedFiles([])
-  }, [])
 
   // 处理任务完成
   const handleTaskComplete = useCallback((task: FusionTask) => {
@@ -69,68 +51,6 @@ const Workspace: React.FC = () => {
           onTaskComplete={handleTaskComplete}
           onTaskSave={handleTaskSave}
         />
-      )
-    },
-    {
-      key: 'upload',
-      label: (
-        <span>
-          <PictureOutlined />
-          图片管理
-        </span>
-      ),
-      children: (
-        <div className="space-y-6">
-          {/* 图片上传区域 */}
-          <div className="bg-white p-6 rounded-lg border">
-            <Title level={4} className="mb-4">图片上传</Title>
-            <div className="space-y-4">
-              <div>
-                <span className="text-gray-600">
-                  请选择要处理的图片文件，支持 JPG、PNG、WebP 格式，最多10张
-                </span>
-              </div>
-              
-              <ImageUpload 
-                onUpload={handleImageUpload}
-                maxCount={10}
-                disabled={!settings?.doubaoApiKey}
-              />
-            </div>
-          </div>
-
-          {/* 图片列表区域 */}
-          {uploadedFiles.length > 0 && (
-            <div className="bg-white p-6 rounded-lg border">
-              <div className="flex justify-between items-center mb-4">
-                <Title level={4} className="mb-0">已上传的图片 ({uploadedFiles.length})</Title>
-                <button 
-                  className="text-red-500 hover:text-red-700 text-sm"
-                  onClick={handleClearAll}
-                >
-                  清空所有
-                </button>
-              </div>
-              
-              <ImageList 
-                files={uploadedFiles}
-                onRemove={handleImageRemove}
-                showRemoveButton={true}
-              />
-            </div>
-          )}
-
-          {/* 使用提示 */}
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <Title level={5} className="text-blue-800 mb-2">💡 使用提示</Title>
-            <div className="text-blue-700 text-sm space-y-1">
-              <div>• 上传的图片将作为参考图片用于图片融合</div>
-              <div>• 支持多种生成模式：文生图、图文生图、多图融合、组图生成</div>
-              <div>• 建议图片清晰度高，主体明确，以获得更好的融合效果</div>
-              <div>• 上传完成后可切换到"图片融合"标签开始创作</div>
-            </div>
-          </div>
-        </div>
       )
     },
     {
