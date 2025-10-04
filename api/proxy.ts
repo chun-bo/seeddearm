@@ -19,12 +19,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // 验证Authorization头
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.status(401).json({ error: 'Authorization header required' });
+      return;
+    }
+
     // 转发请求到火山引擎API
     const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/images/generations', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': req.headers.authorization || '',
+        'Authorization': authHeader,
       },
       body: JSON.stringify(req.body),
     });
@@ -35,17 +42,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
-      const reader = response.body?.getReader();
-      if (reader) {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            res.write(value);
-          }
-        } finally {
-          reader.releaseLock();
+      if (!response.body) {
+        res.status(500).json({ error: 'No response body' });
+        return;
+      }
+
+      const reader = response.body.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          res.write(value);
         }
+      } finally {
+        reader.releaseLock();
       }
       res.end();
     } else {
@@ -55,6 +65,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error('Proxy error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
