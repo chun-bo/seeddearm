@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { Readable } from 'stream';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 只允许 POST 请求
@@ -38,9 +39,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // 将豆包 API 的流式响应体直接 pipe 到我们的响应中
     if (response.body) {
-      // Vercel 的响应对象是 Node.js 的 ServerResponse，可以作为可写流使用
+      // 将 Web Stream 转换为 Node.js Stream
       // @ts-ignore
-      response.body.pipe(res);
+      const nodeStream = Readable.fromWeb(response.body);
+      nodeStream.pipe(res);
     } else {
       res.status(500).json({ error: 'Empty response from upstream API' });
     }
