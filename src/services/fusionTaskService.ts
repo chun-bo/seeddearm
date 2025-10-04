@@ -23,7 +23,7 @@ function projectToFusionTask(project: any, images: any[] = []): FusionTask {
     createdAt: project.created_at,
     updatedAt: project.updated_at,
     result: project.result || undefined,
-    error: project.error || undefined,
+    error: project.error_message || undefined, // 修复：使用正确的数据库字段名
     config: {
       model: project.config?.model || 'doubao-seedream-4-0-250828',
       size: project.config?.size || '2K',
@@ -292,21 +292,23 @@ export class FusionTaskService {
     updates: Partial<Omit<FusionTask, 'id' | 'createdAt'>> & { result?: SeedreamResponse, error?: string }
   ): Promise<FusionTask | undefined> {
     const dbUpdates: { [key: string]: any } = { ...updates, updated_at: new Date().toISOString() };
-
+  
     // FusionTask properties to database column names
     if (updates.userId) dbUpdates.user_id = updates.userId;
+    if (updates.error) dbUpdates.error_message = updates.error; // 修复：映射到正确的数据库字段
     
     // Remove frontend-only properties
     delete dbUpdates.userId;
     delete dbUpdates.images;
-
+    delete dbUpdates.error; // 删除前端字段，使用 error_message
+  
     const { data, error } = await supabase
       .from('projects')
       .update(dbUpdates)
       .eq('id', taskId)
       .select()
       .single();
-
+  
     if (error) {
       console.error(`更新任务 ${taskId} 失败:`, error);
       return undefined;

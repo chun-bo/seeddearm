@@ -12,7 +12,7 @@ import type {
  */
 export class SeedreamAPI {
   private apiKey: string
-  private baseUrl = '/doubao-api/api/v3/images/generations'
+  private baseUrl = 'https://ark.cn-beijing.volces.com/api/v3/images/generations' // 修复：使用完整的API端点
   private defaultModel = 'doubao-seedream-4-0-250828'
 
   constructor(apiKey: string) {
