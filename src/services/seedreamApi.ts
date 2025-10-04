@@ -12,11 +12,12 @@ import type {
  */
 export class SeedreamAPI {
   private apiKey: string
-  private baseUrl = '/api/proxy' // 修改：使用Vercel代理端点
+  private baseUrl = '/api/generate' // 使用我们自己的代理端点
   private defaultModel = 'doubao-seedream-4-0-250828'
 
   constructor(apiKey: string) {
-    this.apiKey = apiKey
+    // API Key 现在在后端处理，前端不再需要直接持有
+    this.apiKey = apiKey 
   }
 
   /**
