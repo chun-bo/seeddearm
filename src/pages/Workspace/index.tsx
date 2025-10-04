@@ -45,8 +45,7 @@ const Workspace: React.FC = () => {
 
   // 处理任务完成
   const handleTaskComplete = useCallback((task: FusionTask) => {
-    // 任务完成后，自动切换到历史记录并刷新
-    setActiveTab('history')
+    // 任务完成后，仅刷新历史记录，不自动切换标签页
     loadHistory()
   }, [loadHistory])
 
