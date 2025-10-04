@@ -9,7 +9,16 @@
       }
     }
   ],
+  "functions": {
+    "api/proxy.ts": {
+      "runtime": "@vercel/node@3"
+    }
+  },
   "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
     {
       "src": "/assets/(.*)",
       "headers": {
