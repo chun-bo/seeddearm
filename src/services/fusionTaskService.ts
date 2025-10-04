@@ -1,17 +1,46 @@
-import type { 
-  FusionTask, 
-  CreateFusionTaskRequest, 
+import type {
+  FusionTask,
+  CreateFusionTaskRequest,
   SeedreamResponse,
-  ApiResponse 
 } from '@/types'
 import { createSeedreamAPI } from './seedreamApi'
+import { supabase } from './supabaseClient'
+import { useAuthStore } from '@/stores/authStore'
+
+/**
+ * 将数据库项目记录转换为前端 FusionTask 对象
+ */
+function projectToFusionTask(project: any, images: any[] = []): FusionTask {
+  const imageUrls = images.sort((a, b) => a.order_index - b.order_index).map(img => img.file_url);
+  return {
+    id: project.id,
+    userId: project.user_id,
+    title: project.title,
+    prompt: project.prompt,
+    images: imageUrls,
+    status: project.status,
+    progress: project.progress || 0,
+    createdAt: project.created_at,
+    updatedAt: project.updated_at,
+    result: project.result || undefined,
+    error: project.error || undefined,
+    config: {
+      model: project.config?.model || 'doubao-seedream-4-0-250828',
+      size: project.config?.size || '2K',
+      sequential_image_generation: project.config?.sequential_image_generation || 'disabled',
+      response_format: project.config?.response_format || 'url',
+      watermark: project.config?.watermark ?? true,
+      ...(project.config || {})
+    },
+  };
+}
+
 
 /**
  * 图片融合任务管理服务
  * 负责任务的创建、状态管理、结果处理等
  */
 export class FusionTaskService {
-  private tasks: Map<string, FusionTask> = new Map()
   private apiKey: string
 
   constructor(apiKey: string) {
@@ -19,97 +48,97 @@ export class FusionTaskService {
   }
 
   /**
-   * 创建新的融合任务
+   * 创建新的融合任务并存入数据库
    */
   async createTask(request: CreateFusionTaskRequest): Promise<FusionTask> {
-    const taskId = this.generateTaskId()
-    
-    const task: FusionTask = {
-      id: taskId,
-      userId: 'current-user', // TODO: 从用户状态获取
-      title: request.title,
-      prompt: request.prompt,
-      images: request.images,
-      status: 'pending',
-      progress: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      config: {
-        model: 'doubao-seedream-4-0-250828',
-        size: '2K',
-        sequential_image_generation: 'disabled',
-        response_format: 'url',
-        watermark: true,
-        ...request.config
+    const { user } = useAuthStore.getState()
+    if (!user) {
+      throw new Error('用户未登录，无法创建任务')
+    }
+
+    // 1. 在 projects 表中创建主任务记录
+    const { data: projectData, error: projectError } = await supabase
+      .from('projects')
+      .insert({
+        user_id: user.id,
+        title: request.title,
+        prompt: request.prompt,
+        status: 'pending',
+        progress: 0,
+        config: request.config,
+      })
+      .select()
+      .single()
+
+    if (projectError) {
+      console.error('创建项目失败:', projectError)
+      throw new Error(`创建任务失败: ${projectError.message}`)
+    }
+
+    const newProjectId = projectData.id
+
+    // 2. 将图片信息存入 project_images 表
+    if (request.images && request.images.length > 0) {
+      const imageRecords = request.images.map((imageUrl, index) => ({
+        project_id: newProjectId,
+        file_url: imageUrl,
+        order_index: index,
+        file_name: `image_${index}.jpg`,
+        file_size: 0,
+        mime_type: 'image/jpeg'
+      }))
+
+      const { error: imageError } = await supabase
+        .from('project_images')
+        .insert(imageRecords)
+
+      if (imageError) {
+        console.error('存储项目图片失败:', imageError)
+        // 在生产环境中，这里应该回滚（删除）已创建的 project
+        throw new Error(`存储任务图片失败: ${imageError.message}`)
       }
     }
 
-    this.tasks.set(taskId, task)
-    return task
+    return projectToFusionTask(projectData, request.images.map(url => ({ file_url: url })));
   }
 
   /**
    * 提交任务到 Doubao API
    */
   async submitTask(taskId: string): Promise<void> {
-    const task = this.tasks.get(taskId)
+    const task = await this.getTask(taskId);
     if (!task) {
-      throw new Error('任务不存在')
+      throw new Error('任务不存在');
     }
 
     try {
-      // 更新任务状态为处理中
-      this.updateTaskStatus(taskId, 'processing', 10)
+      await this.updateTask(taskId, { status: 'processing', progress: 10 });
 
-      const api = createSeedreamAPI(this.apiKey)
-      
-      // 在调用 API 前转换图片
+      const api = createSeedreamAPI(this.apiKey);
       const processedImages = await this.convertImagesToBase64(task.images);
 
-      // 根据图片数量和配置选择合适的生成方法
-      let result: SeedreamResponse
+      let result: SeedreamResponse;
 
       if (processedImages.length === 0) {
-        // 文生图
-        result = await api.textToImage(task.prompt, {
-          size: task.config.size,
-          response_format: task.config.response_format,
-          watermark: task.config.watermark
-        })
+        result = await api.textToImage(task.prompt, { ...task.config });
       } else if (processedImages.length === 1 && task.config.sequential_image_generation === 'disabled') {
-        // 单图生图
-        result = await api.imageToImage(task.prompt, processedImages[0], {
-          size: task.config.size,
-          response_format: task.config.response_format,
-          watermark: task.config.watermark
-        })
+        result = await api.imageToImage(task.prompt, processedImages[0], { ...task.config });
       } else if (task.config.sequential_image_generation === 'auto') {
-        // 组图生成
         result = await api.generateImageSet(
           task.prompt,
           task.config.max_images || 4,
           processedImages.length > 0 ? processedImages : undefined,
-          {
-            size: task.config.size,
-            response_format: task.config.response_format,
-            watermark: task.config.watermark
-          }
-        )
+          { ...task.config }
+        );
       } else {
-        // 多图融合
-        result = await api.fuseImages(task.prompt, processedImages, {
-          size: task.config.size,
-          response_format: task.config.response_format,
-          watermark: task.config.watermark
-        })
+        result = await api.fuseImages(task.prompt, processedImages, { ...task.config });
       }
 
-      // 任务完成
-      this.updateTaskResult(taskId, result)
-      
+      await this.updateTask(taskId, { status: 'completed', progress: 100, result });
     } catch (error) {
-      console.error('任务执行失败:', error)
-      this.updateTaskError(taskId, error instanceof Error ? error.message : '未知错误')
+      console.error('任务执行失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      await this.updateTask(taskId, { status: 'failed', error: errorMessage });
     }
   }
 
@@ -120,27 +149,23 @@ export class FusionTaskService {
     taskId: string,
     onProgress?: (progress: number, data?: any) => void
   ): Promise<void> {
-    const task = this.tasks.get(taskId)
+    const task = await this.getTask(taskId);
     if (!task) {
-      throw new Error('任务不存在')
+      throw new Error('任务不存在');
     }
 
     try {
-      this.updateTaskStatus(taskId, 'processing', 10)
+      await this.updateTask(taskId, { status: 'processing', progress: 10 });
+      if (onProgress) onProgress(10);
 
-      const api = createSeedreamAPI(this.apiKey)
-      
-      // 在调用 API 前转换图片
+      const api = createSeedreamAPI(this.apiKey);
       const processedImages = await this.convertImagesToBase64(task.images);
       
-      // 根据图片数量决定 image 参数的格式
       let imageParam: string | string[] | undefined;
       if (processedImages.length === 1) {
-        imageParam = processedImages[0]; // 单图模式，使用字符串
+        imageParam = processedImages[0];
       } else if (processedImages.length > 1) {
-        imageParam = processedImages; // 多图模式，使用数组
-      } else {
-        imageParam = undefined; // 文生图模式
+        imageParam = processedImages;
       }
 
       const result = await api.generateWithStream(
@@ -148,118 +173,146 @@ export class FusionTaskService {
           model: task.config.model,
           prompt: task.prompt,
           image: imageParam,
-          size: task.config.size,
-          sequential_image_generation: task.config.sequential_image_generation,
-          sequential_image_generation_options: task.config.max_images ? {
-            max_images: task.config.max_images
-          } : undefined,
-          response_format: task.config.response_format,
-          watermark: task.config.watermark
+          ...task.config,
         },
         (data) => {
-          // 处理流式数据
           if (data.data && data.data.length > 0) {
-            const progress = Math.min(90, 20 + (data.data.length * 20))
-            this.updateTaskStatus(taskId, 'processing', progress)
+            const progress = Math.min(90, 20 + (data.data.length * 20));
+            this.updateTask(taskId, { progress }); // Fire-and-forget update
             if (onProgress) {
-              onProgress(progress, data)
+              onProgress(progress, data);
             }
           }
         }
-      )
+      );
 
-      this.updateTaskResult(taskId, result)
+      await this.updateTask(taskId, { status: 'completed', progress: 100, result });
       if (onProgress) {
-        onProgress(100, result)
+        onProgress(100, result);
       }
-      
     } catch (error) {
-      console.error('流式任务执行失败:', error)
-      this.updateTaskError(taskId, error instanceof Error ? error.message : '未知错误')
+      console.error('流式任务执行失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      await this.updateTask(taskId, { status: 'failed', error: errorMessage });
     }
   }
 
   /**
    * 获取任务详情
    */
-  getTask(taskId: string): FusionTask | undefined {
-    return this.tasks.get(taskId)
+  async getTask(taskId: string): Promise<FusionTask | undefined> {
+    const { data: project, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', taskId)
+      .single();
+
+    if (error || !project) {
+      console.error('获取任务失败:', error);
+      return undefined;
+    }
+
+    const { data: images, error: imageError } = await supabase
+      .from('project_images')
+      .select('*')
+      .eq('project_id', taskId)
+      .order('order_index', { ascending: true });
+
+    if (imageError) {
+      console.error('获取任务图片失败:', imageError);
+      // Even if images fail, we can still return the main task data
+    }
+
+    return projectToFusionTask(project, images || []);
   }
 
   /**
    * 获取所有任务
    */
-  getAllTasks(): FusionTask[] {
-    return Array.from(this.tasks.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
+  async getAllTasks(): Promise<FusionTask[]> {
+     const { user } = useAuthStore.getState();
+     if (!user) return [];
+     return this.getUserTasks(user.id);
   }
 
   /**
    * 获取用户的任务列表
    */
-  getUserTasks(userId: string): FusionTask[] {
-    return this.getAllTasks().filter(task => task.userId === userId)
+  async getUserTasks(userId: string): Promise<FusionTask[]> {
+    const { data: projects, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('获取用户任务列表失败:', error);
+      return [];
+    }
+    
+    // For simplicity, this doesn't fetch images for the whole list.
+    // The full details (including images) are fetched when a single task is opened.
+    return projects.map(p => projectToFusionTask(p));
   }
 
   /**
    * 删除任务
    */
-  deleteTask(taskId: string): boolean {
-    return this.tasks.delete(taskId)
+  async deleteTask(taskId: string): Promise<boolean> {
+    // First delete associated images
+    const { error: imageError } = await supabase
+      .from('project_images')
+      .delete()
+      .eq('project_id', taskId);
+
+    if (imageError) {
+      console.error('删除任务图片失败:', imageError);
+      return false;
+    }
+
+    // Then delete the project itself
+    const { error: projectError } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', taskId);
+      
+    if (projectError) {
+      console.error('删除任务失败:', projectError);
+      return false;
+    }
+    
+    return true;
   }
 
   /**
-   * 更新任务状态
+   * 更新任务 (统一的更新方法)
    */
-  private updateTaskStatus(
+  async updateTask(
     taskId: string, 
-    status: FusionTask['status'], 
-    progress?: number
-  ): void {
-    const task = this.tasks.get(taskId)
-    if (task) {
-      task.status = status
-      if (progress !== undefined) {
-        task.progress = progress
-      }
-      task.updatedAt = new Date().toISOString()
-      this.tasks.set(taskId, task)
-    }
-  }
+    updates: Partial<Omit<FusionTask, 'id' | 'createdAt'>> & { result?: SeedreamResponse, error?: string }
+  ): Promise<FusionTask | undefined> {
+    const dbUpdates: { [key: string]: any } = { ...updates, updated_at: new Date().toISOString() };
 
-  /**
-   * 更新任务结果
-   */
-  private updateTaskResult(taskId: string, result: SeedreamResponse): void {
-    const task = this.tasks.get(taskId)
-    if (task) {
-      task.status = 'completed'
-      task.progress = 100
-      task.result = result
-      task.updatedAt = new Date().toISOString()
-      this.tasks.set(taskId, task)
-    }
-  }
+    // FusionTask properties to database column names
+    if (updates.userId) dbUpdates.user_id = updates.userId;
+    
+    // Remove frontend-only properties
+    delete dbUpdates.userId;
+    delete dbUpdates.images;
 
-  /**
-   * 更新任务错误
-   */
-  private updateTaskError(taskId: string, error: string): void {
-    const task = this.tasks.get(taskId)
-    if (task) {
-      task.status = 'failed'
-      task.error = error
-      task.updatedAt = new Date().toISOString()
-      this.tasks.set(taskId, task)
-    }
-  }
+    const { data, error } = await supabase
+      .from('projects')
+      .update(dbUpdates)
+      .eq('id', taskId)
+      .select()
+      .single();
 
-  /**
-   * 生成任务ID
-   */
-  private generateTaskId(): string {
-    return `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    if (error) {
+      console.error(`更新任务 ${taskId} 失败:`, error);
+      return undefined;
+    }
+    
+    return this.getTask(taskId); // Re-fetch to get consistent data with images
   }
 
   /**
@@ -267,7 +320,6 @@ export class FusionTaskService {
    */
   private async convertImagesToBase64(imageUrls: string[]): Promise<string[]> {
     const conversionPromises = imageUrls.map(async (url) => {
-      // 只转换 blob URL，其他假定为有效的公网 URL
       if (url.startsWith('blob:')) {
         try {
           const response = await fetch(url);
@@ -292,25 +344,24 @@ export class FusionTaskService {
    * 重试失败的任务
    */
   async retryTask(taskId: string): Promise<void> {
-    const task = this.tasks.get(taskId)
+    const task = await this.getTask(taskId);
     if (!task) {
-      throw new Error('任务不存在')
+      throw new Error('任务不存在');
     }
 
     if (task.status !== 'failed') {
-      throw new Error('只能重试失败的任务')
+      throw new Error('只能重试失败的任务');
     }
 
-    // 重置任务状态
-    task.status = 'pending'
-    task.progress = 0
-    task.error = undefined
-    task.result = undefined
-    task.updatedAt = new Date().toISOString()
-    this.tasks.set(taskId, task)
+    await this.updateTask(taskId, {
+      status: 'pending',
+      progress: 0,
+      error: undefined,
+      result: undefined,
+    });
 
     // 重新提交任务
-    await this.submitTask(taskId)
+    await this.submitTask(taskId);
   }
 }
 

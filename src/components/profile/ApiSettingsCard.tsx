@@ -4,7 +4,7 @@ import { KeyOutlined, SaveOutlined } from '@ant-design/icons'
 import { useSettingsStore } from '@/stores/settingsStore'
 
 interface ApiSettingsFormData {
-  doubaoApiKey: string
+  api_key: string
 }
 
 const ApiSettingsCard: React.FC = () => {
@@ -21,7 +21,7 @@ const ApiSettingsCard: React.FC = () => {
   useEffect(() => {
     if (settings) {
       form.setFieldsValue({
-        doubaoApiKey: settings.doubaoApiKey || ''
+        api_key: settings.api_key || ''
       })
     }
   }, [settings, form])
@@ -61,7 +61,7 @@ const ApiSettingsCard: React.FC = () => {
               Doubao API 密钥
             </span>
           }
-          name="doubaoApiKey"
+          name="api_key"
           extra="输入您的Doubao API密钥以启用AI换装功能"
           rules={[
             {

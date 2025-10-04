@@ -12,13 +12,17 @@ const Register: React.FC = () => {
 
   const onFinish = async (values: { email: string; password: string; username: string }) => {
     try {
-      await register(values.email, values.password, values.username)
-      message.success('注册成功！')
-      navigate('/workspace')
+      await register(values.email, values.password, values.username);
+      message.success('注册成功！请检查您的邮箱以完成验证。');
+      navigate('/auth/login'); // Redirect to login page to wait for verification
     } catch (error) {
-      message.error('注册失败，请稍后重试')
+        if (error instanceof Error) {
+            message.error(`注册失败: ${error.message}`);
+        } else {
+            message.error('注册失败，发生未知错误');
+        }
     }
-  }
+  };
 
   return (
     <Card className="w-full">

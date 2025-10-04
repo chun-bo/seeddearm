@@ -56,7 +56,7 @@ const FusionWorkspace: React.FC<FusionWorkspaceProps> = ({
 
   // 获取用户设置
   const { settings } = useSettingsStore()
-  const apiKey = settings?.doubaoApiKey
+  const apiKey = settings?.api_key
 
   // 步骤配置
   const steps = [
@@ -139,8 +139,9 @@ const FusionWorkspace: React.FC<FusionWorkspaceProps> = ({
       const imageUrls: string[] = []
       for (const file of uploadedFiles) {
         if (file.status === 'done') {
-          // 这里应该是已上传的图片URL，暂时使用preview
-          imageUrls.push(file.preview)
+          // 优先使用 Supabase URL，如果没有则使用预览 URL
+          const extendedFile = file as any
+          imageUrls.push(extendedFile.supabaseUrl || file.preview)
         }
       }
 
@@ -163,9 +164,9 @@ const FusionWorkspace: React.FC<FusionWorkspaceProps> = ({
       // 提交任务（使用流式处理）
       await taskService.submitTaskWithStream(
         task.id,
-        (progress, data) => {
+        async (progress, data) => {
           // 更新任务状态
-          const updatedTask = taskService.getTask(task.id)
+          const updatedTask = await taskService.getTask(task.id)
           if (updatedTask) {
             setCurrentTask(updatedTask)
           }
@@ -173,7 +174,7 @@ const FusionWorkspace: React.FC<FusionWorkspaceProps> = ({
       )
 
       // 获取最终结果
-      const finalTask = taskService.getTask(task.id)
+      const finalTask = await taskService.getTask(task.id)
       if (finalTask) {
         setCurrentTask(finalTask)
         if (finalTask.status === 'completed') {
@@ -208,7 +209,7 @@ const FusionWorkspace: React.FC<FusionWorkspaceProps> = ({
       const taskService = getTaskService(apiKey)
       await taskService.retryTask(taskId)
       
-      const updatedTask = taskService.getTask(taskId)
+      const updatedTask = await taskService.getTask(taskId)
       if (updatedTask) {
         setCurrentTask(updatedTask)
       }

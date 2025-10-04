@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Typography, Tabs, message } from 'antd'
 import { 
   HistoryOutlined, 
@@ -6,35 +6,55 @@ import {
   RocketOutlined 
 } from '@ant-design/icons'
 import { FusionWorkspace } from '../../components/fusion'
-import type { UploadFile, FusionTask } from '../../types'
+import type { FusionTask } from '../../types'
 import { useSettingsStore } from '../../stores/settingsStore'
+import { useAuthStore } from '@/stores/authStore'
+import { getTaskService } from '@/services/fusionTaskService'
 
 const { Title } = Typography
 
 const Workspace: React.FC = () => {
   const [activeTab, setActiveTab] = useState('fusion')
   const [taskHistory, setTaskHistory] = useState<FusionTask[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   const { settings } = useSettingsStore()
+  const { user } = useAuthStore()
+  const apiKey = settings?.api_key
+
+  // 加载历史任务
+  const loadHistory = useCallback(async () => {
+    if (!user || !apiKey) return
+    setIsLoading(true)
+    try {
+      const taskService = getTaskService(apiKey)
+      const tasks = await taskService.getUserTasks(user.id)
+      setTaskHistory(tasks)
+    } catch (error) {
+      message.error('加载历史记录失败')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [user, apiKey])
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      loadHistory()
+    }
+  }, [activeTab, loadHistory])
 
   // 处理任务完成
   const handleTaskComplete = useCallback((task: FusionTask) => {
-    console.log('任务完成:', task)
-    // 可以在这里添加成功后的处理逻辑
-    // 比如跳转到历史记录页面，或者显示成功提示
-  }, [])
+    // 任务完成后，自动切换到历史记录并刷新
+    setActiveTab('history')
+    loadHistory()
+  }, [loadHistory])
 
-  // 处理任务保存
+  // 处理任务保存（现在仅作为刷新历史记录的触发器）
   const handleTaskSave = useCallback((task: FusionTask) => {
-    setTaskHistory(prev => {
-      // 避免重复保存
-      const exists = prev.find(t => t.id === task.id)
-      if (exists) {
-        return prev.map(t => t.id === task.id ? task : t)
-      }
-      return [task, ...prev]
-    })
-  }, [])
+    loadHistory()
+    message.success('任务已同步')
+  }, [loadHistory])
 
   // 标签页配置
   const tabItems = [
@@ -132,7 +152,7 @@ const Workspace: React.FC = () => {
       </div>
 
       {/* API Key 状态检查 */}
-      {!settings?.doubaoApiKey && (
+      {!settings?.api_key && (
         <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center space-x-2">
             <SettingOutlined className="text-yellow-600" />

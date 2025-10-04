@@ -162,7 +162,6 @@
 - user_settings 用户设置表（API 密钥等）
 - projects 项目表
 - project_images 项目图片表
-- usage_logs 使用记录表
 
 **验收标准**:
 - 用户数据可以持久化存储

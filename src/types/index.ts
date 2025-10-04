@@ -1,3 +1,6 @@
+// 重新导出数据库类型
+export type { Database } from './database'
+
 // 用户相关类型
 export interface User {
   id: string
@@ -8,39 +11,20 @@ export interface User {
   updatedAt: string
 }
 
-export interface UserSettings {
-  id: string
-  userId: string
-  doubaoApiKey?: string
-  theme: 'light' | 'dark'
-  language: 'zh-CN' | 'en-US'
-  createdAt: string
-  updatedAt: string
-}
+// 使用数据库类型定义
+import type { Database } from './database'
 
-// 项目相关类型
-export interface Project {
-  id: string
-  userId: string
-  title: string
-  description?: string
-  prompt: string
-  status: 'draft' | 'processing' | 'completed' | 'failed'
-  resultImageUrl?: string
-  createdAt: string
-  updatedAt: string
-}
+export type UserSettings = Database['public']['Tables']['user_settings']['Row']
+export type UserSettingsInsert = Database['public']['Tables']['user_settings']['Insert']
+export type UserSettingsUpdate = Database['public']['Tables']['user_settings']['Update']
 
-export interface ProjectImage {
-  id: string
-  projectId: string
-  originalName: string
-  fileUrl: string
-  fileSize: number
-  mimeType: string
-  order: number
-  createdAt: string
-}
+export type Project = Database['public']['Tables']['projects']['Row']
+export type ProjectInsert = Database['public']['Tables']['projects']['Insert']
+export type ProjectUpdate = Database['public']['Tables']['projects']['Update']
+
+export type ProjectImage = Database['public']['Tables']['project_images']['Row']
+export type ProjectImageInsert = Database['public']['Tables']['project_images']['Insert']
+export type ProjectImageUpdate = Database['public']['Tables']['project_images']['Update']
 
 // API相关类型
 export interface ApiResponse<T = any> {
@@ -50,7 +34,7 @@ export interface ApiResponse<T = any> {
   error?: string
 }
 
-// Doubao-Seedream API 完整类型定义
+// Seedream API 类型
 export interface SeedreamRequest {
   model: string
   prompt: string
@@ -89,7 +73,7 @@ export interface SeedreamError {
   }
 }
 
-// 图片融合任务类型
+// 融合任务类型（基于数据库 projects 表）
 export interface FusionTask {
   id: string
   userId: string
@@ -102,7 +86,7 @@ export interface FusionTask {
   error?: string
   createdAt: string
   updatedAt: string
-  // 任务配置
+  // 配置信息（存储在 result 字段中）
   config: {
     model: string
     size: string
@@ -113,7 +97,7 @@ export interface FusionTask {
   }
 }
 
-// 任务创建请求
+// 创建融合任务请求
 export interface CreateFusionTaskRequest {
   title: string
   prompt: string
@@ -121,8 +105,7 @@ export interface CreateFusionTaskRequest {
   config?: Partial<FusionTask['config']>
 }
 
-// 废弃的旧类型（保持向后兼容）
-/** @deprecated 使用 SeedreamRequest 替代 */
+// Doubao API 类型
 export interface DoubaoApiRequest {
   prompt: string
   images: string[]
@@ -130,7 +113,6 @@ export interface DoubaoApiRequest {
   parameters?: Record<string, any>
 }
 
-/** @deprecated 使用 FusionTask 替代 */
 export interface DoubaoApiResponse {
   taskId: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
@@ -138,13 +120,16 @@ export interface DoubaoApiResponse {
   error?: string
 }
 
-// 上传相关类型
+// 文件上传类型
 export interface UploadFile {
   id: string
   file: File
   preview: string
   status: 'uploading' | 'done' | 'error'
   progress: number
+  // 新增：Supabase 相关字段
+  supabaseUrl?: string
+  storagePath?: string
 }
 
 // 使用统计类型
@@ -162,7 +147,7 @@ export interface DailyUsage {
   cost: number
 }
 
-// 图片融合模式枚举
+// 融合模式枚举
 export enum FusionMode {
   TEXT_TO_IMAGE = 'text_to_image',           // 文生图
   IMAGE_TO_IMAGE = 'image_to_image',         // 图文生图
@@ -172,7 +157,7 @@ export enum FusionMode {
   MULTI_IMAGE_TO_SET = 'multi_image_to_set'      // 多图生组图
 }
 
-// 预设尺寸选项
+// 尺寸选项
 export interface SizeOption {
   label: string
   value: string
@@ -190,3 +175,12 @@ export const PRESET_SIZES: SizeOption[] = [
   { label: '2:3 相机竖屏', value: '1664x2496', ratio: '2:3', pixels: '1664x2496' },
   { label: '21:9 超宽屏', value: '3024x1296', ratio: '21:9', pixels: '3024x1296' }
 ]
+
+// 主题类型
+export type Theme = 'light' | 'dark'
+
+// 语言类型
+export type Language = 'zh-CN' | 'en-US'
+
+// 项目状态类型
+export type ProjectStatus = 'pending' | 'processing' | 'completed' | 'failed'

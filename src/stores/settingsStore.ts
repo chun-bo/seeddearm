@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { UserSettings } from '@/types'
+import { userSettingsService } from '@/services/userSettingsService'
+import { useAuthStore } from './authStore'
+import type { Database } from '@/types/database'
+
+type UserSettings = Database['public']['Tables']['user_settings']['Row']
 
 interface SettingsState {
   settings: UserSettings | null
@@ -11,7 +15,10 @@ interface SettingsState {
   loadSettings: () => Promise<void>
   updateSettings: (settings: Partial<UserSettings>) => Promise<void>
   updateApiKey: (apiKey: string) => Promise<void>
+  updateTheme: (theme: string) => Promise<void>
+  updateLanguage: (language: string) => Promise<void>
   clearError: () => void
+  reset: () => void
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -22,23 +29,18 @@ export const useSettingsStore = create<SettingsState>()(
       error: null,
 
       loadSettings: async () => {
+        const { user } = useAuthStore.getState()
+        if (!user) {
+          set({ error: '用户未登录', loading: false })
+          return
+        }
+
         set({ loading: true, error: null })
         try {
-          // 模拟API调用
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          const mockSettings: UserSettings = {
-            id: '1',
-            userId: '1',
-            theme: 'light',
-            language: 'zh-CN',
-            doubaoApiKey: '',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }
-          
-          set({ settings: mockSettings, loading: false })
+          const settings = await userSettingsService.getOrCreateUserSettings(user.id)
+          set({ settings, loading: false })
         } catch (error) {
+          console.error('加载用户设置失败:', error)
           set({ 
             error: error instanceof Error ? error.message : '加载设置失败',
             loading: false 
@@ -47,21 +49,24 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       updateSettings: async (newSettings: Partial<UserSettings>) => {
+        const { user } = useAuthStore.getState()
+        if (!user) {
+          set({ error: '用户未登录' })
+          return
+        }
+
         set({ loading: true, error: null })
         try {
-          // 模拟API调用
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          const currentSettings = get().settings
-          if (currentSettings) {
-            const updatedSettings = {
-              ...currentSettings,
-              ...newSettings,
-              updatedAt: new Date().toISOString(),
-            }
-            set({ settings: updatedSettings, loading: false })
-          }
+          const updatedSettings = await userSettingsService.updateUserSettings(
+            user.id, 
+            newSettings
+          )
+          set({ 
+            settings: updatedSettings, 
+            loading: false 
+          })
         } catch (error) {
+          console.error('更新设置失败:', error)
           set({ 
             error: error instanceof Error ? error.message : '更新设置失败',
             loading: false 
@@ -70,21 +75,21 @@ export const useSettingsStore = create<SettingsState>()(
       },
 
       updateApiKey: async (apiKey: string) => {
+        const { user } = useAuthStore.getState()
+        if (!user) {
+          set({ error: '用户未登录' })
+          return
+        }
+
         set({ loading: true, error: null })
         try {
-          // 模拟API调用
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-          const currentSettings = get().settings
-          if (currentSettings) {
-            const updatedSettings = {
-              ...currentSettings,
-              doubaoApiKey: apiKey,
-              updatedAt: new Date().toISOString(),
-            }
-            set({ settings: updatedSettings, loading: false })
-          }
+          const updatedSettings = await userSettingsService.updateApiKey(user.id, apiKey)
+          set({ 
+            settings: updatedSettings, 
+            loading: false 
+          })
         } catch (error) {
+          console.error('更新API密钥失败:', error)
           set({ 
             error: error instanceof Error ? error.message : '更新API密钥失败',
             loading: false 
@@ -92,13 +97,79 @@ export const useSettingsStore = create<SettingsState>()(
         }
       },
 
+      updateTheme: async (theme: string) => {
+        const { user } = useAuthStore.getState()
+        if (!user) {
+          set({ error: '用户未登录' })
+          return
+        }
+
+        set({ loading: true, error: null })
+        try {
+          const updatedSettings = await userSettingsService.updateTheme(user.id, theme)
+          set({ 
+            settings: updatedSettings, 
+            loading: false 
+          })
+        } catch (error) {
+          console.error('更新主题失败:', error)
+          set({ 
+            error: error instanceof Error ? error.message : '更新主题失败',
+            loading: false 
+          })
+        }
+      },
+
+      updateLanguage: async (language: string) => {
+        const { user } = useAuthStore.getState()
+        if (!user) {
+          set({ error: '用户未登录' })
+          return
+        }
+
+        set({ loading: true, error: null })
+        try {
+          const updatedSettings = await userSettingsService.updateLanguage(user.id, language)
+          set({ 
+            settings: updatedSettings, 
+            loading: false 
+          })
+        } catch (error) {
+          console.error('更新语言失败:', error)
+          set({ 
+            error: error instanceof Error ? error.message : '更新语言失败',
+            loading: false 
+          })
+        }
+      },
+
       clearError: () => set({ error: null }),
+
+      reset: () => set({ 
+        settings: null, 
+        loading: false, 
+        error: null 
+      }),
     }),
     {
       name: 'settings-storage',
       partialize: (state) => ({ 
-        settings: state.settings 
+        // 不持久化敏感信息，只在内存中保存
+        // settings: state.settings 
       }),
     }
   )
 )
+
+// 监听认证状态变化，自动加载/清理设置
+useAuthStore.subscribe((state) => {
+  const { loadSettings, reset } = useSettingsStore.getState()
+  
+  if (state.isAuthenticated && state.user) {
+    // 用户登录时自动加载设置
+    loadSettings()
+  } else {
+    // 用户登出时清理设置
+    reset()
+  }
+})
